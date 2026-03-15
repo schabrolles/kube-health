@@ -33,4 +33,40 @@ Line 1
 Line 2
 Line 3
  (Error)`, os.SubStatuses[0].Conditions)
+
+ // Test Job pod with successful completion (exit code 0)
+ os = e.Eval(t.Context(), objs[5])
+ assert.False(t, os.Status().Progressing)
+ assert.Equal(t, status.Ok, os.Status().Result, "Job pod with exit code 0 should be Ok")
+ test.AssertConditions(t, `Initialized   (Unknown)
+Ready PodCompleted  (Error)
+ContainersReady PodCompleted  (Unknown)
+PodScheduled   (Unknown)
+Succeeded   (Ok)`, os.Conditions)
+ // Container should be Ok with exit code 0
+ assert.Equal(t, 1, len(os.SubStatuses), "Should have one container status")
+ assert.Equal(t, status.Ok, os.SubStatuses[0].Status().Result, "Container with exit code 0 should be Ok")
+ test.AssertConditions(t, `Terminated  Completed (Ok)`, os.SubStatuses[0].Conditions)
+
+ // Test Job pod with failed completion (non-zero exit code)
+ os = e.Eval(t.Context(), objs[6])
+ assert.False(t, os.Status().Progressing)
+ assert.Equal(t, status.Error, os.Status().Result, "Job pod with non-zero exit code should be Error")
+ test.AssertConditions(t, `Initialized   (Unknown)
+Ready PodFailed  (Error)
+ContainersReady PodFailed  (Unknown)
+PodScheduled   (Unknown)
+Failed Failed  (Error)`, os.Conditions)
+ // Container should be Error with non-zero exit code
+ assert.Equal(t, 1, len(os.SubStatuses), "Should have one container status")
+ assert.Equal(t, status.Error, os.SubStatuses[0].Status().Result, "Container with non-zero exit code should be Error")
+ test.AssertConditions(t, `Terminated Error  (Error)`, os.SubStatuses[0].Conditions)
+
+ // Test CronJob pod with successful completion
+ os = e.Eval(t.Context(), objs[7])
+ assert.False(t, os.Status().Progressing)
+ assert.Equal(t, status.Ok, os.Status().Result, "CronJob pod with exit code 0 should be Ok")
+ // Container should be Ok with exit code 0
+ assert.Equal(t, 1, len(os.SubStatuses), "Should have one container status")
+ assert.Equal(t, status.Ok, os.SubStatuses[0].Status().Result, "CronJob container with exit code 0 should be Ok")
 }

@@ -44,7 +44,30 @@ func (a PodAnalyzer) Analyze(ctx context.Context, obj *status.Object) status.Obj
 	// details of each container separately.
 	containerStatuses := a.analyzePodContainers(ctx, obj, &pod)
 
-	return AggregateResult(obj, containerStatuses, conditions)
+	result := AggregateResult(obj, containerStatuses, conditions)
+
+	// Special handling for completed pods: if all containers exited successfully (exit code 0),
+	// override the result to Ok, even if Ready/ContainersReady conditions are False
+	// (which is expected for completed pods)
+	if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed {
+		allSuccess := true
+		hasContainers := len(pod.Status.ContainerStatuses) > 0
+		
+		for _, cs := range pod.Status.ContainerStatuses {
+			if cs.State.Terminated == nil || cs.State.Terminated.ExitCode != 0 {
+				allSuccess = false
+				break
+			}
+		}
+		
+		// If all containers completed successfully, mark the pod as Ok
+		if allSuccess && hasContainers {
+			result.ObjStatus.Result = status.Ok
+			result.ObjStatus.Status = status.Ok.String()
+		}
+	}
+
+	return result
 }
 
 func podSyntheticConditions(pod *corev1.Pod) []status.ConditionStatus {
@@ -52,9 +75,37 @@ func podSyntheticConditions(pod *corev1.Pod) []status.ConditionStatus {
 
 	switch pod.Status.Phase {
 	case corev1.PodSucceeded:
-		conditions = append(conditions, SyntheticConditionOk("Succeeded", ""))
+		// Pod completed successfully - check if all containers exited with code 0
+		allSuccess := true
+		for _, cs := range pod.Status.ContainerStatuses {
+			if cs.State.Terminated != nil && cs.State.Terminated.ExitCode != 0 {
+				allSuccess = false
+				break
+			}
+		}
+		if allSuccess {
+			// All containers completed successfully, mark as Ok
+			conditions = append(conditions, SyntheticConditionOk("Succeeded", ""))
+		} else {
+			// Some containers failed despite pod being in Succeeded phase
+			conditions = append(conditions, SyntheticConditionError("Succeeded", "ContainersFailed", ""))
+		}
 	case corev1.PodFailed:
-		conditions = append(conditions, SyntheticConditionError("Failed", "Failed", ""))
+		// Check if this is a Job/CronJob pod that actually succeeded (all containers exit code 0)
+		allSuccess := true
+		for _, cs := range pod.Status.ContainerStatuses {
+			if cs.State.Terminated == nil || cs.State.Terminated.ExitCode != 0 {
+				allSuccess = false
+				break
+			}
+		}
+		if allSuccess && len(pod.Status.ContainerStatuses) > 0 {
+			// All containers exited with code 0, this is actually a success
+			conditions = append(conditions, SyntheticConditionOk("Completed", ""))
+		} else {
+			// Actual failure
+			conditions = append(conditions, SyntheticConditionError("Failed", "Failed", ""))
+		}
 	}
 
 	return conditions
@@ -114,13 +165,19 @@ func (a PodAnalyzer) analyzeContainer(ctx context.Context, obj *status.Object, c
 
 	if cs.State.Terminated != nil {
 		reason := cs.State.Terminated.Reason
-		cond = SyntheticConditionError("Terminated", reason, "")
+		// Check exit code: 0 means successful completion, non-zero means failure
+		if cs.State.Terminated.ExitCode == 0 {
+			cond = SyntheticConditionOk("Terminated", reason)
+		} else {
+			cond = SyntheticConditionError("Terminated", reason, "")
+		}
 	}
 
 	if (cond == status.ConditionStatus{}) {
 		return status.ObjectStatus{}
 	}
 
+	// Only fetch logs for actual errors (not for successful completions)
 	if cond.Status().Result > status.Ok {
 		a.expandWithLogs(ctx, obj, cs.Name, &cond)
 	}

@@ -251,3 +251,151 @@ items:
     status:
       conditions:
       phase: Running
+  # Job pod with successful completion (exit code 0)
+  - apiVersion: v1
+    kind: Pod
+    metadata:
+      uid: d1234567-89ab-cdef-0123-456789abcdef
+      name: job-pod-success
+      namespace: default
+      labels:
+        job-name: test-job
+      ownerReferences:
+      - apiVersion: batch/v1
+        controller: true
+        kind: Job
+        name: test-job
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: main
+        image: busybox:latest
+    status:
+      phase: Succeeded
+      conditions:
+      - lastTransitionTime: "2026-03-12T10:00:00Z"
+        status: "True"
+        type: Initialized
+      - lastTransitionTime: "2026-03-12T10:00:05Z"
+        status: "False"
+        type: Ready
+        reason: PodCompleted
+      - lastTransitionTime: "2026-03-12T10:00:05Z"
+        status: "False"
+        type: ContainersReady
+        reason: PodCompleted
+      - lastTransitionTime: "2026-03-12T10:00:00Z"
+        status: "True"
+        type: PodScheduled
+      containerStatuses:
+      - name: main
+        image: busybox:latest
+        imageID: docker-pullable://busybox@sha256:abc123
+        ready: false
+        restartCount: 0
+        started: false
+        state:
+          terminated:
+            exitCode: 0
+            reason: Completed
+            startedAt: "2026-03-12T10:00:01Z"
+            finishedAt: "2026-03-12T10:00:05Z"
+  # Job pod with failed completion (non-zero exit code)
+  - apiVersion: v1
+    kind: Pod
+    metadata:
+      uid: e2345678-9abc-def0-1234-56789abcdef0
+      name: job-pod-failed
+      namespace: default
+      labels:
+        job-name: test-job-failed
+      ownerReferences:
+      - apiVersion: batch/v1
+        controller: true
+        kind: Job
+        name: test-job-failed
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: main
+        image: busybox:latest
+    status:
+      phase: Failed
+      conditions:
+      - lastTransitionTime: "2026-03-12T10:00:00Z"
+        status: "True"
+        type: Initialized
+      - lastTransitionTime: "2026-03-12T10:00:05Z"
+        status: "False"
+        type: Ready
+        reason: PodFailed
+      - lastTransitionTime: "2026-03-12T10:00:05Z"
+        status: "False"
+        type: ContainersReady
+        reason: PodFailed
+      - lastTransitionTime: "2026-03-12T10:00:00Z"
+        status: "True"
+        type: PodScheduled
+      containerStatuses:
+      - name: main
+        image: busybox:latest
+        imageID: docker-pullable://busybox@sha256:abc123
+        ready: false
+        restartCount: 0
+        started: false
+        state:
+          terminated:
+            exitCode: 1
+            reason: Error
+            message: "Command failed with exit code 1"
+            startedAt: "2026-03-12T10:00:01Z"
+            finishedAt: "2026-03-12T10:00:05Z"
+  # CronJob pod with successful completion
+  - apiVersion: v1
+    kind: Pod
+    metadata:
+      uid: f3456789-abcd-ef01-2345-6789abcdef01
+      name: cronjob-pod-success
+      namespace: default
+      labels:
+        job-name: test-cronjob-123456
+      ownerReferences:
+      - apiVersion: batch/v1
+        controller: true
+        kind: Job
+        name: test-cronjob-123456
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: main
+        image: busybox:latest
+    status:
+      phase: Succeeded
+      conditions:
+      - lastTransitionTime: "2026-03-12T10:00:00Z"
+        status: "True"
+        type: Initialized
+      - lastTransitionTime: "2026-03-12T10:00:05Z"
+        status: "False"
+        type: Ready
+        reason: PodCompleted
+      - lastTransitionTime: "2026-03-12T10:00:05Z"
+        status: "False"
+        type: ContainersReady
+        reason: PodCompleted
+      - lastTransitionTime: "2026-03-12T10:00:00Z"
+        status: "True"
+        type: PodScheduled
+      containerStatuses:
+      - name: main
+        image: busybox:latest
+        imageID: docker-pullable://busybox@sha256:abc123
+        ready: false
+        restartCount: 0
+        started: false
+        state:
+          terminated:
+            exitCode: 0
+            reason: Completed
+            startedAt: "2026-03-12T10:00:01Z"
+            finishedAt: "2026-03-12T10:00:05Z"
