@@ -220,6 +220,13 @@ func (t *TreePrinter) PrintStatuses(objects []status.ObjectStatus, w io.Writer) 
 	sortObjects(objects)
 
 	for _, obj := range objects {
+		// Filter out OK resources when ErrorsOnly is enabled
+		if t.PrintOpts.ErrorsOnly {
+			if obj.Status().Result == status.Ok && !obj.Status().Progressing {
+				continue
+			}
+		}
+
 		subObjects := obj.SubStatuses
 		prefixTail := ""
 		printSubResources := len(subObjects) > 0 && t.shouldPrintDetails(obj)
@@ -236,6 +243,10 @@ func (t *TreePrinter) PrintStatuses(objects []status.ObjectStatus, w io.Writer) 
 
 // shouldPrintDetails decides whether to print the details of the object.
 func (t *TreePrinter) shouldPrintDetails(obj status.ObjectStatus) bool {
+	// ErrorsOnly takes precedence over ShowOk
+	if t.PrintOpts.ErrorsOnly {
+		return obj.Status().Result > status.Ok || obj.Status().Progressing
+	}
 	if t.PrintOpts.ShowOk {
 		return true
 	}

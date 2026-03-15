@@ -42,8 +42,30 @@ kube-health <object-type>/<object-name>
 Besides the health of the object itself, it shows the details from sub-resources
 (including tail of logs of the failed container in this case).
 
-By default, the sub-resources are only displayed for objects in abnormal state. Use `-H`
+By default, the sub-resources are only displayed for objects in abnormal state. Use `-H/--show-healthy`
 to show details for objects with healthy (OK) status as well.
+
+Conversely, you can use `-E/--errors-only` to filter the output to show only resources
+with errors or warnings, completely hiding healthy resources from the display. This is
+useful when monitoring large deployments where you only want to focus on problematic resources.
+
+``` sh
+# Show only resources with errors or warnings
+kube-health deployment/my-app --errors-only
+```
+
+Note: `--errors-only` and `--show-healthy` are mutually exclusive options.
+
+### Log Color Highlighting
+
+When using the default tree+color output format, container logs are automatically
+color-coded to help identify issues quickly:
+
+- **Red highlighting** for error-related keywords: `error`, `fatal`, `panic`, `exception`, `failed`, `failure`
+- **Yellow highlighting** for warning-related keywords: `warning`, `warn`, `deprecated`
+
+Keyword matching is case-insensitive, so both `ERROR` and `error` will be highlighted.
+Colors can be disabled by using an output format without the `+color` suffix.
 
 It's possible to combine `kube-health` with `kubectl apply` via a pipe:
 

@@ -56,6 +56,7 @@ type Evaluator struct {
 	analyzers      []Analyzer
 	loader         Loader
 	analyzersCache map[types.UID]Analyzer
+	useColor       bool // Color preference for log highlighting
 
 	cache              map[types.UID]*status.Object         // mapping of UID to the object
 	nsCache            map[string]*nsCache                  // mapping of namespace to its cache
@@ -68,6 +69,7 @@ func NewEvaluator(analyzerInits []AnalyzerInit, loader Loader) *Evaluator {
 	evaluator := &Evaluator{
 		loader:         loader,
 		analyzersCache: make(map[types.UID]Analyzer),
+		useColor:       false, // Default to no color
 
 		cache:     make(map[types.UID]*status.Object),
 		ownership: make(map[types.UID]map[types.UID]struct{}),
@@ -81,6 +83,16 @@ func NewEvaluator(analyzerInits []AnalyzerInit, loader Loader) *Evaluator {
 	}
 	evaluator.analyzers = analyzers
 	return evaluator
+}
+
+// SetUseColor sets the color preference for log highlighting.
+func (e *Evaluator) SetUseColor(useColor bool) {
+	e.useColor = useColor
+}
+
+// UseColor returns the color preference for log highlighting.
+func (e *Evaluator) UseColor() bool {
+	return e.useColor
 }
 
 // Filter returns the objects from the cache that match the matcher.

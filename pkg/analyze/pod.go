@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/inecas/kube-health/pkg/eval"
+	"github.com/inecas/kube-health/pkg/print"
 	"github.com/inecas/kube-health/pkg/status"
 )
 
@@ -197,6 +198,9 @@ func (a PodAnalyzer) expandWithLogs(ctx context.Context, obj *status.Object, con
 	if logs == "" {
 		return
 	}
+
+	// Apply color highlighting to logs
+	logs = print.HighlightLogs(logs, a.e.UseColor())
 
 	if cond.Message != "" {
 		cond.Message = "\n"

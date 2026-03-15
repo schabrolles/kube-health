@@ -65,6 +65,7 @@ type flags struct {
 	waitOk       bool
 	showGroup    bool
 	showOk       bool
+	errorsOnly   bool
 	printVersion bool
 	width        int
 	configFlags  *genericclioptions.ConfigFlags
@@ -94,6 +95,8 @@ func (f *flags) addFlags(cmd *cobra.Command) {
 		"For each object, show API group it belongs to")
 	fs.BoolVarP(&f.showOk, "show-healthy", "H", false,
 		"Show details for all objects, including those with OK status")
+	fs.BoolVarP(&f.errorsOnly, "errors-only", "E", false,
+		"Show only resources with errors or warnings")
 	fs.IntVar(&f.width, "width", -1,
 		"Width of the output. By default, it's inferred from the terminal width. Set to 0 to disable wrapping")
 	fs.BoolVar(&f.printVersion, "version", false, "Print version information")
@@ -128,9 +131,10 @@ func (f *flags) printOpts() print.PrintOptions {
 		}
 	}
 	po := print.PrintOptions{
-		ShowGroup: f.showGroup,
-		ShowOk:    f.showOk,
-		Width:     termWidth,
+		ShowGroup:  f.showGroup,
+		ShowOk:     f.showOk,
+		ErrorsOnly: f.errorsOnly,
+		Width:      termWidth,
 	}
 
 	if strings.Contains(*f.printFlags.OutputFormat, "+color") {
@@ -216,6 +220,10 @@ func runFunc(fl *flags) func(cmd *cobra.Command, args []string) error {
 		}
 
 		evaluator := eval.NewEvaluator(analyze.DefaultAnalyzers(), ldr)
+		
+		// Set color preference from print options
+		printOpts := fl.printOpts()
+		evaluator.SetUseColor(printOpts.Color)
 
 		poller := eval.NewStatusPoller(2*time.Second, evaluator, objects)
 		updatesChan := poller.Start(ctx)

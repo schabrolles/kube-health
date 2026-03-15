@@ -7,10 +7,11 @@ import (
 )
 
 type PrintOptions struct {
-	ShowGroup bool // By default, group names are not shown.
-	ShowOk    bool // By default, OK statuses are not shown.
-	Width     int  // Width of the output. If 0, wrapping is disabled.
-	Color     bool // Use colors to indicate the health.
+	ShowGroup  bool // By default, group names are not shown.
+	ShowOk     bool // By default, OK statuses are not shown.
+	ErrorsOnly bool // Show only resources with errors or warnings.
+	Width      int  // Width of the output. If 0, wrapping is disabled.
+	Color      bool // Use colors to indicate the health.
 }
 
 type OutStreams struct {
